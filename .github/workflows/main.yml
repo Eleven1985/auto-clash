@@ -1,0 +1,41 @@
+name: Update Proxy Nodes
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 每6小时运行一次 (UTC时间)
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  update-nodes:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # 使用最新的Python 3版本
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pyyaml # 确保安装或更新requests和pyyaml
+
+    - name: Run node update script
+      run: python scripts/update_nodes.py
+
+    - name: Commit and push if changes
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        # 检查 nodes.yaml 是否有变化
+        git add nodes.yaml
+        if ! git diff --cached --exit-code; then
+          git commit -m "Auto update proxy nodes" # 修改了提交信息
+          git push
+        else
+          echo "No changes to nodes.yaml. Skipping commit and push."
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
